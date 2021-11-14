@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  Create Simple Nginx
+Parameters:
+  AppName:
+    Type: String
+    Default: "simple-nginx"
+  VpcCidrBlock:
+    Type: String
+    Default: "10.0.0.0/16"
+  PublicSubnetCidrBlock:
+    Type: String
+    Default: "10.0.10.0/24"
+  AMI:
+    Type: String
+    Default: "ami-09ebacdc178ae23b7"
+  InstanceType:
+    Type: String
+    Default: "t3.micro"
+  KEYNAME:
+    Type: String
+    Default: testkey
+  AllowedIP:
+    Type: String
+    Default: "0.0.0.0/0"
+  AZ:
+    Type: String
+    Default: "ap-northeast-1a"
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-VPC"
+        - Key: AppName
+          Value: !Sub "${AppName}"
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-internet-gateway"
+        - Key: AppName
+          Value: !Sub "${AppName}"
+  InternetGatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC 
+  PublicSubnet01:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      AvailabilityZone: !Ref AZ
+      CidrBlock: !Ref PublicSubnetCidrBlock
+      VpcId: !Ref VPC 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-public-1"
+        - Key: AppName
+          Value: !Sub "${AppName}"
+  SecurityGroup01:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${AppName}-security-group-01"
+      GroupDescription: !Sub "${AppName} SecurityGroup"
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - CidrIp: !Sub "${AllowedIP}"
+          Description: "ssh"
+          FromPort: 22
+          IpProtocol: "tcp"
+          ToPort: 22
+        - CidrIp: "0.0.0.0/0"
+          Description: "http"
+          FromPort: 80
+          IpProtocol: "tcp"
+          ToPort: 80
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-security-group-01"
+        - Key: AppName
+          Value: !Sub "${AppName}"
+  PublicSubnetRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref VPC 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}-public-subnet01-route-table"
+        - Key: AppName
+          Value: !Sub "${AppName}"
+  PublicSubnetRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref PublicSubnetRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway 
+  PublicSubnetRouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet01 
+      RouteTableId: !Ref PublicSubnetRouteTable
+  EC2:
+    Type: AWS::EC2::Instance
+    DependsOn: SecurityGroup01
+    Properties:
+      AvailabilityZone: !Ref AZ 
+      ImageId: !Sub "${AMI}"
+      InstanceType: !Sub "${InstanceType}"
+      KeyName: !Sub "${KEYNAME}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AppName}"
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet: 
+            - !Ref SecurityGroup01
+          SubnetId: !Ref PublicSubnet01
+      UserData:
+        Fn::Base64: |
+            #!/bin/bash
+            yum update -y
+            amazon-linux-extras install nginx1
+            service nginx start

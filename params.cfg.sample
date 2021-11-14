@@ -1,0 +1,3 @@
+KEYNAME='test_key'
+AppName='simple-nginx'
+AllowedIP='0.0.0.0/32'
