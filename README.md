@@ -14,6 +14,6 @@ This is a template makes it easy to get started with Nginx by using AWS Cloud Fo
 
 ### About params.cfg
 
-KEYNAME: EC2 key pair name.
-AppName: Application name, this can be whatever you like.
-AllowedIP: You can restrict SSH access IP. If you don't want to do it, just input '0.0.0.0/32'.
+KEYNAME: EC2 key pair name.  
+AppName: Application name, this can be whatever you like.  
+AllowedIP: You can restrict SSH access IP. If you don't want to do it, just input '0.0.0.0/32'.  
